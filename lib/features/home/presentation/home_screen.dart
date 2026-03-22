@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_event.dart';
 import '../../auth/bloc/auth_state.dart';
-import '../../auth/data/models/user_model.dart';
 import '../../profile/bloc/profile_bloc.dart';
 import '../../profile/data/repositories/profile_repository.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -58,7 +58,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthUnauthenticated) {
+        if (state is AuthSessionExpiredState) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Your session has expired. Please log in again.'),
+              backgroundColor: Colors.redAccent,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          Navigator.pushReplacementNamed(context, '/login');
+        } else if (state is AuthUnauthenticated) {
           Navigator.pushReplacementNamed(context, '/login');
         }
       },

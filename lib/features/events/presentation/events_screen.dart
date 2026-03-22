@@ -25,6 +25,10 @@ class _EventsScreenState extends State<EventsScreen> {
   List<LavvaggioModel> _lavvaggios        = [];
   bool                 _lavvaggiosLoading = true;
 
+  // Cached events list — kept across EventCompleting so the UI does not flicker
+  List<EventModel> _cachedEvents = [];
+  bool             _hasNextPage  = false;
+
   final _searchCtrl   = TextEditingController();
   String _searchQuery = '';
   bool   _showSearch  = false;
@@ -44,9 +48,9 @@ class _EventsScreenState extends State<EventsScreen> {
 
   Future<void> _loadLavvaggios() async {
     try {
-      final list = await LavvaggioRepository().getLavvaggios();
+      final result = await LavvaggioRepository().getLavvaggios();
       setState(() {
-        _lavvaggios        = list;
+        _lavvaggios        = result.data;
         _lavvaggiosLoading = false;
       });
     } catch (_) {
@@ -245,7 +249,24 @@ class _EventsScreenState extends State<EventsScreen> {
           ),
         ],
 
-        body: BlocBuilder<EventBloc, EventState>(
+        body: BlocConsumer<EventBloc, EventState>(
+          listener: (context, state) {
+            if (state is EventsLoaded) {
+              setState(() {
+                _cachedEvents = state.events;
+                _hasNextPage  = state.meta.hasNextPage;
+              });
+            } else if (state is EventCompleted) {
+              setState(() => _cachedEvents = state.updatedEvents);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content:         Text('Wash marked as complete'),
+                  backgroundColor: AppColors.success,
+                  duration:        Duration(seconds: 2),
+                ),
+              );
+            }
+          },
           builder: (context, state) {
 
             if (state is EventInitial || state is EventLoading) {
@@ -256,8 +277,14 @@ class _EventsScreenState extends State<EventsScreen> {
               return _ErrorView(message: state.message, onRetry: _loadEvents);
             }
 
-            if (state is EventsLoaded) {
-              final filtered = _filterEvents(state.events);
+            // For any loaded/completing/completed state, render the events UI
+            if (state is EventsLoaded   ||
+                state is EventCompleting ||
+                state is EventCompleted) {
+              final int? completingEventId = state is EventCompleting
+                  ? state.eventId
+                  : null;
+              final filtered = _filterEvents(_cachedEvents);
 
               return RefreshIndicator(
                 onRefresh: _onRefresh,
@@ -267,7 +294,7 @@ class _EventsScreenState extends State<EventsScreen> {
                     // ── Stats bar (total only) ──
                     SliverToBoxAdapter(
                       child: _StatsBar(
-                        total:         state.events.length,
+                        total:         _cachedEvents.length,
                         dateFilter:    _dateFilter,
                         customRange:   _customRange,
                         lavvaggioName: _selectedLavvaggioName,
@@ -293,8 +320,27 @@ class _EventsScreenState extends State<EventsScreen> {
                       const SliverFillRemaining(child: _EmptyView())
                     else
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                        sliver:  _GroupedEventList(events: filtered),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        sliver:  _GroupedEventList(
+                          events:            filtered,
+                          completingEventId: completingEventId,
+                        ),
+                      ),
+
+                    // ── Load More ──
+                    if (_hasNextPage)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                          child: OutlinedButton(
+                            onPressed: _loadEvents,
+                            child: const Text('Load More'),
+                          ),
+                        ),
+                      )
+                    else
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 32),
                       ),
                   ],
                 ),
@@ -569,7 +615,8 @@ class _FilterChip extends StatelessWidget {
 // ── Grouped Event List ────────────────────────────────────────────────────────
 class _GroupedEventList extends StatelessWidget {
   final List<EventModel> events;
-  const _GroupedEventList({required this.events});
+  final int?             completingEventId;
+  const _GroupedEventList({required this.events, this.completingEventId});
 
   Map<String, List<EventModel>> _groupByDate() {
     final grouped = <String, List<EventModel>>{};
@@ -641,7 +688,10 @@ class _GroupedEventList extends StatelessWidget {
               ),
               ...dayEvs.map((e) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child:   _EventCard(event: e),
+                child:   _EventCard(
+                  event:       e,
+                  isCompleting: completingEventId == e.id,
+                ),
               )),
             ],
           );
@@ -655,7 +705,8 @@ class _GroupedEventList extends StatelessWidget {
 // ── Event Card ────────────────────────────────────────────────────────────────
 class _EventCard extends StatelessWidget {
   final EventModel event;
-  const _EventCard({required this.event});
+  final bool       isCompleting;
+  const _EventCard({required this.event, this.isCompleting = false});
 
   Color get _typeColor => switch (event.vehicleType.toLowerCase()) {
     'sedan' => const Color(0xFF3B82F6),
@@ -687,99 +738,163 @@ class _EventCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Emoji badge
-            Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(
-                color:        _typeColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: Text(_vehicleEmoji(event.vehicleType), style: const TextStyle(fontSize: 20)),
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        event.vehiclePlate,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontFamily: 'monospace',
-                          fontSize:   15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color:        _typeColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          event.vehicleType.toUpperCase(),
-                          style: TextStyle(color: _typeColor, fontSize: 9, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
+            Row(
+              children: [
+                // Emoji badge
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color:        _typeColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time_rounded, size: 12, color: AppColors.textSecondary),
-                      const SizedBox(width: 3),
-                      Text(
-                        event.completed
-                            ? '${event.formattedStartTime} → ${event.formattedEndTime}'
-                            : 'Started ${event.formattedStartTime}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  if (event.lavvaggioName != null) ...[
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        const Icon(Icons.store_outlined, size: 12, color: AppColors.textSecondary),
-                        const SizedBox(width: 3),
-                        Text(
-                          event.lavvaggioName!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // Duration (right side — only if completed)
-            if (event.completed && event.durationSeconds != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Text(
-                  event.formattedDuration,
-                  style: const TextStyle(
-                    color:      AppColors.textSecondary,
-                    fontSize:   12,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w600,
+                  child: Center(
+                    child: Text(_vehicleEmoji(event.vehicleType), style: const TextStyle(fontSize: 20)),
                   ),
                 ),
+
+                const SizedBox(width: 12),
+
+                // Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            event.vehiclePlate,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontFamily: 'monospace',
+                              fontSize:   15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color:        _typeColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              event.vehicleType.toUpperCase(),
+                              style: TextStyle(color: _typeColor, fontSize: 9, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.access_time_rounded, size: 12, color: AppColors.textSecondary),
+                          const SizedBox(width: 3),
+                          Text(
+                            event.completed
+                                ? '${event.formattedStartTime} → ${event.formattedEndTime}'
+                                : 'Started ${event.formattedStartTime}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      if (event.lavvaggioName != null) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            const Icon(Icons.store_outlined, size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 3),
+                            Text(
+                              event.lavvaggioName!,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // Duration (right side — only if completed)
+                if (event.completed && event.durationSeconds != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      event.formattedDuration,
+                      style: const TextStyle(
+                        color:      AppColors.textSecondary,
+                        fontSize:   12,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            // ── Complete Wash button — only for in-progress events ──
+            if (!event.completed) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: isCompleting
+                    ? const SizedBox(
+                        width:  20,
+                        height: 20,
+                        child:  CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : OutlinedButton(
+                        onPressed: () => _showCompleteConfirmation(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.success,
+                          side:            const BorderSide(color: AppColors.success),
+                          padding:         const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          minimumSize:     Size.zero,
+                          tapTargetSize:   MaterialTapTargetSize.shrinkWrap,
+                          shape:           RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Complete Wash',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ),
               ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  void _showCompleteConfirmation(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Mark as Complete'),
+        content: const Text('Mark this wash as complete?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child:     const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+            ),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed == true && context.mounted) {
+        context.read<EventBloc>().add(EventCompleteRequested(event.id));
+      }
+    });
   }
 }
 
