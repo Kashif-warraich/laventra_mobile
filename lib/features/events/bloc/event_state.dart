@@ -33,18 +33,3 @@ class EventError extends EventState {
   @override
   List<Object?> get props => [message];
 }
-
-class EventCompleting extends EventState {
-  final int eventId;
-  const EventCompleting(this.eventId);
-  @override
-  List<Object?> get props => [eventId];
-}
-
-class EventCompleted extends EventState {
-  final EventModel       event;
-  final List<EventModel> updatedEvents;
-  const EventCompleted(this.event, this.updatedEvents);
-  @override
-  List<Object?> get props => [event, updatedEvents];
-}

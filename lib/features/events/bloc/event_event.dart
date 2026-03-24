@@ -36,10 +36,3 @@ class EventsRefreshRequested extends EventEvent {
   @override
   List<Object?> get props => [lavvaggioId, from, to];
 }
-
-class EventCompleteRequested extends EventEvent {
-  final int eventId;
-  const EventCompleteRequested(this.eventId);
-  @override
-  List<Object?> get props => [eventId];
-}

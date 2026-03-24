@@ -605,63 +605,24 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completionLabel =
-        '${stats.completionRate.toStringAsFixed(2)}%';
-
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon:     Icons.water_drop_rounded,
-                label:    'Total Washes',
-                value:    '${stats.totalWashes}',
-                color:    AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon:     Icons.check_circle_rounded,
-                label:    'Completed',
-                value:    '${stats.completedWashes}',
-                color:    AppColors.success,
-              ),
-            ),
-          ],
+        Expanded(
+          child: _StatCard(
+            icon:  Icons.water_drop_rounded,
+            label: 'Total Washes',
+            value: '${stats.totalWashes}',
+            color: AppColors.primary,
+          ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon:     Icons.autorenew_rounded,
-                label:    'In Progress',
-                value:    '${stats.inProgress}',
-                color:    AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon:     Icons.timer_rounded,
-                label:    'Avg Duration',
-                value:    stats.formattedAvgDuration,
-                color:    AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _StatCard(
-          icon:  Icons.percent_rounded,
-          label: 'Completion Rate',
-          value: completionLabel,
-          color: stats.completionRate >= 80
-              ? AppColors.success
-              : AppColors.primary,
-          fullWidth: true,
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon:  Icons.timer_rounded,
+            label: 'Avg Duration',
+            value: stats.formattedAvgDuration,
+            color: AppColors.textSecondary,
+          ),
         ),
       ],
     );
@@ -1131,14 +1092,11 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completed  = event['completed'] == true;
     final plate      = event['vehicle_plate'] ?? '';
     final type       = event['vehicle_type']  ?? '';
     final startedAt  = DateTime.tryParse(event['started_at'] ?? '');
     final endedAt    = DateTime.tryParse(event['ended_at']   ?? '');
-    final duration   = event['duration_seconds'] as int?;
-    final statusColor = completed ? AppColors.success : AppColors.primary;
-    final statusLabel = completed ? 'COMPLETED' : 'IN PROGRESS';
+    final duration   = (event['duration_seconds'] as num?)?.toDouble();
 
     String fmt(DateTime? dt) {
       if (dt == null) return '—';
@@ -1146,9 +1104,11 @@ class _EventCard extends StatelessWidget {
           '${dt.minute.toString().padLeft(2,'0')}';
     }
 
-    String fmtDur(int? s) {
+    String fmtDur(double? s) {
       if (s == null) return '';
-      return '${s ~/ 60}m ${s % 60}s';
+      final m = (s / 60).floor();
+      final sec = (s % 60).round();
+      return '${m}m ${sec}s';
     }
 
     return Container(
@@ -1164,7 +1124,7 @@ class _EventCard extends StatelessWidget {
             width:  4,
             height: 56,
             decoration: BoxDecoration(
-              color:        statusColor,
+              color:        AppColors.success,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -1194,9 +1154,7 @@ class _EventCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  completed
-                      ? '${fmt(startedAt)} → ${fmt(endedAt)}'
-                      : 'Started ${fmt(startedAt)}',
+                  '${fmt(startedAt)} → ${fmt(endedAt)}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
                   ),
@@ -1204,39 +1162,15 @@ class _EventCard extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color:        statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(
-                    color:      statusColor,
-                    fontSize:   9,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          if (duration != null)
+            Text(
+              fmtDur(duration),
+              style: const TextStyle(
+                color:      AppColors.textSecondary,
+                fontSize:   12,
+                fontFamily: 'monospace',
               ),
-              if (completed && duration != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  fmtDur(duration),
-                  style: const TextStyle(
-                    color:      AppColors.textSecondary,
-                    fontSize:   12,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ],
-            ],
-          ),
+            ),
         ],
       ),
     );

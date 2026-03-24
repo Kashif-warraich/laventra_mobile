@@ -1,12 +1,12 @@
 class LavvaggioModel {
-  final int     id;
-  final String  name;
-  final String  address;
-  final String  city;
-  final String  country;
-  final String  status;
-  final OwnerModel? owner;
-  final DeviceSummary? device;
+  final int              id;
+  final String           name;
+  final String           address;
+  final String           city;
+  final String           country;
+  final String           status;
+  final List<PartnerModel> partners;
+  final DeviceSummary?   device;
 
   const LavvaggioModel({
     required this.id,
@@ -15,7 +15,7 @@ class LavvaggioModel {
     required this.city,
     required this.country,
     required this.status,
-    this.owner,
+    this.partners = const [],
     this.device,
   });
 
@@ -23,25 +23,32 @@ class LavvaggioModel {
 
   String get fullAddress => '$address, $city, $country';
 
+  String get partnersDisplay {
+    if (partners.isEmpty) return '—';
+    return partners.map((p) => p.fullName).join(', ');
+  }
+
   factory LavvaggioModel.fromJson(Map<String, dynamic> json) => LavvaggioModel(
-    id:      json['id'],
-    name:    json['name'],
-    address: json['address'],
-    city:    json['city'],
-    country: json['country'],
-    status:  json['status'],
-    owner:   json['user']   != null ? OwnerModel.fromJson(json['user'])     : null,
-    device:  json['device'] != null ? DeviceSummary.fromJson(json['device']): null,
+    id:       json['id'],
+    name:     json['name'],
+    address:  json['address'],
+    city:     json['city'],
+    country:  json['country'],
+    status:   json['status'],
+    partners: (json['partners'] as List<dynamic>? ?? [])
+        .map((p) => PartnerModel.fromJson(p as Map<String, dynamic>))
+        .toList(),
+    device:   json['device'] != null ? DeviceSummary.fromJson(json['device']) : null,
   );
 }
 
-class OwnerModel {
+class PartnerModel {
   final int    id;
   final String firstName;
   final String lastName;
   final String email;
 
-  const OwnerModel({
+  const PartnerModel({
     required this.id,
     required this.firstName,
     required this.lastName,
@@ -50,7 +57,7 @@ class OwnerModel {
 
   String get fullName => '$firstName $lastName';
 
-  factory OwnerModel.fromJson(Map<String, dynamic> json) => OwnerModel(
+  factory PartnerModel.fromJson(Map<String, dynamic> json) => PartnerModel(
     id:        json['id'],
     firstName: json['first_name'],
     lastName:  json['last_name'],

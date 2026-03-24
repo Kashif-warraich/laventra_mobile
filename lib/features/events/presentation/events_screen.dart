@@ -25,7 +25,7 @@ class _EventsScreenState extends State<EventsScreen> {
   List<LavvaggioModel> _lavvaggios        = [];
   bool                 _lavvaggiosLoading = true;
 
-  // Cached events list — kept across EventCompleting so the UI does not flicker
+  // Cached events list — kept across state transitions so the UI does not flicker
   List<EventModel> _cachedEvents = [];
   bool             _hasNextPage  = false;
 
@@ -256,15 +256,6 @@ class _EventsScreenState extends State<EventsScreen> {
                 _cachedEvents = state.events;
                 _hasNextPage  = state.meta.hasNextPage;
               });
-            } else if (state is EventCompleted) {
-              setState(() => _cachedEvents = state.updatedEvents);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content:         Text('Wash marked as complete'),
-                  backgroundColor: AppColors.success,
-                  duration:        Duration(seconds: 2),
-                ),
-              );
             }
           },
           builder: (context, state) {
@@ -277,13 +268,8 @@ class _EventsScreenState extends State<EventsScreen> {
               return _ErrorView(message: state.message, onRetry: _loadEvents);
             }
 
-            // For any loaded/completing/completed state, render the events UI
-            if (state is EventsLoaded   ||
-                state is EventCompleting ||
-                state is EventCompleted) {
-              final int? completingEventId = state is EventCompleting
-                  ? state.eventId
-                  : null;
+            // For any loaded state, render the events UI
+            if (state is EventsLoaded) {
               final filtered = _filterEvents(_cachedEvents);
 
               return RefreshIndicator(
@@ -322,8 +308,7 @@ class _EventsScreenState extends State<EventsScreen> {
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                         sliver:  _GroupedEventList(
-                          events:            filtered,
-                          completingEventId: completingEventId,
+                          events: filtered,
                         ),
                       ),
 
@@ -615,8 +600,7 @@ class _FilterChip extends StatelessWidget {
 // ── Grouped Event List ────────────────────────────────────────────────────────
 class _GroupedEventList extends StatelessWidget {
   final List<EventModel> events;
-  final int?             completingEventId;
-  const _GroupedEventList({required this.events, this.completingEventId});
+  const _GroupedEventList({required this.events});
 
   Map<String, List<EventModel>> _groupByDate() {
     final grouped = <String, List<EventModel>>{};
@@ -688,10 +672,7 @@ class _GroupedEventList extends StatelessWidget {
               ),
               ...dayEvs.map((e) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child:   _EventCard(
-                  event:       e,
-                  isCompleting: completingEventId == e.id,
-                ),
+                child:   _EventCard(event: e),
               )),
             ],
           );
@@ -705,8 +686,7 @@ class _GroupedEventList extends StatelessWidget {
 // ── Event Card ────────────────────────────────────────────────────────────────
 class _EventCard extends StatelessWidget {
   final EventModel event;
-  final bool       isCompleting;
-  const _EventCard({required this.event, this.isCompleting = false});
+  const _EventCard({required this.event});
 
   Color get _typeColor => switch (event.vehicleType.toLowerCase()) {
     'sedan' => const Color(0xFF3B82F6),
@@ -792,9 +772,7 @@ class _EventCard extends StatelessWidget {
                           const Icon(Icons.access_time_rounded, size: 12, color: AppColors.textSecondary),
                           const SizedBox(width: 3),
                           Text(
-                            event.completed
-                                ? '${event.formattedStartTime} → ${event.formattedEndTime}'
-                                : 'Started ${event.formattedStartTime}',
+                            '${event.formattedStartTime} → ${event.formattedEndTime}',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
                           ),
                         ],
@@ -816,8 +794,8 @@ class _EventCard extends StatelessWidget {
                   ),
                 ),
 
-                // Duration (right side — only if completed)
-                if (event.completed && event.durationSeconds != null)
+                // Duration (right side)
+                if (event.durationSeconds != null)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: Text(
@@ -832,69 +810,10 @@ class _EventCard extends StatelessWidget {
                   ),
               ],
             ),
-
-            // ── Complete Wash button — only for in-progress events ──
-            if (!event.completed) ...[
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: isCompleting
-                    ? const SizedBox(
-                        width:  20,
-                        height: 20,
-                        child:  CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : OutlinedButton(
-                        onPressed: () => _showCompleteConfirmation(context),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.success,
-                          side:            const BorderSide(color: AppColors.success),
-                          padding:         const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          minimumSize:     Size.zero,
-                          tapTargetSize:   MaterialTapTargetSize.shrinkWrap,
-                          shape:           RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Complete Wash',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-              ),
-            ],
           ],
         ),
       ),
     );
-  }
-
-  void _showCompleteConfirmation(BuildContext context) {
-    showDialog<bool>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Text('Mark as Complete'),
-        content: const Text('Mark this wash as complete?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child:     const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-            ),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    ).then((confirmed) {
-      if (confirmed == true && context.mounted) {
-        context.read<EventBloc>().add(EventCompleteRequested(event.id));
-      }
-    });
   }
 }
 

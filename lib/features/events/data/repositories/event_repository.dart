@@ -30,11 +30,4 @@ class EventRepository {
         res.data['meta'] as Map<String, dynamic>);
     return PaginatedResponse(data: list, meta: meta);
   }
-
-  Future<EventModel> completeEvent(int id) async {
-    final res = await _dio.patch(
-      '${ApiConstants.carWashEvents}/$id/complete',
-    );
-    return EventModel.fromJson(res.data['data'] as Map<String, dynamic>);
-  }
 }
