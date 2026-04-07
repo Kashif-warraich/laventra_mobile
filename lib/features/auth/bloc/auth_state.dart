@@ -47,3 +47,8 @@ class AuthLoginFailure extends AuthState {
   @override
   List<Object?> get props => [message];
 }
+
+// Token expired — triggers auto-logout with a brief message
+class AuthSessionExpiredState extends AuthUnauthenticated {
+  const AuthSessionExpiredState();
+}

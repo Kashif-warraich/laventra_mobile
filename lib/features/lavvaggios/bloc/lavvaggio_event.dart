@@ -34,3 +34,12 @@ class LavvaggioUpdateRequested extends LavvaggioEvent {
 class LavvaggioRefreshRequested extends LavvaggioEvent {
   const LavvaggioRefreshRequested();
 }
+
+class LavvaggioStatsLoadRequested extends LavvaggioEvent {
+  final int       lavvaggioId;
+  final DateTime? from;
+  final DateTime? to;
+  const LavvaggioStatsLoadRequested(this.lavvaggioId, {this.from, this.to});
+  @override
+  List<Object?> get props => [lavvaggioId, from, to];
+}

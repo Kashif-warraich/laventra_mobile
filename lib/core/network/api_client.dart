@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../constants/api_constants.dart';
 import '../storage/secure_storage.dart';
+import 'session_expired_notifier.dart';
 
 class ApiClient {
   ApiClient._();
@@ -32,9 +33,10 @@ class ApiClient {
           return handler.next(options);
         },
         onError: (error, handler) async {
-          // 401 — clear storage and let bloc handle navigation
+          // 401 — clear storage and notify AuthBloc to force logout
           if (error.response?.statusCode == 401) {
             await SecureStorage.instance.clearAll();
+            SessionExpiredNotifier.instance.notify();
           }
           return handler.next(error);
         },

@@ -6,8 +6,7 @@ class EventModel {
   final String  vehicleType;
   final DateTime  startedAt;
   final DateTime? endedAt;
-  final int?    durationSeconds;
-  final bool    completed;
+  final num?    durationSeconds;
   final String? lavvaggioName;
   final String? deviceSerial;
 
@@ -20,15 +19,15 @@ class EventModel {
     required this.startedAt,
     this.endedAt,
     this.durationSeconds,
-    required this.completed,
     this.lavvaggioName,
     this.deviceSerial,
   });
 
   String get formattedDuration {
     if (durationSeconds == null) return '—';
-    final m = durationSeconds! ~/ 60;
-    final s = durationSeconds! % 60;
+    final totalSecs = durationSeconds!.toDouble();
+    final m = (totalSecs / 60).floor();
+    final s = (totalSecs % 60).round();
     return '${m}m ${s}s';
   }
 
@@ -67,8 +66,7 @@ class EventModel {
       endedAt:         json['ended_at'] != null
           ? DateTime.parse(json['ended_at'] as String)
           : null,
-      durationSeconds: json['duration_seconds'] as int?,
-      completed:       (json['completed'] ?? false) as bool,
+      durationSeconds: json['duration_seconds'] as num?,
       lavvaggioName:   lavvaggio?['name']         as String?,
       deviceSerial:    device?['serial_number']   as String?,
     );

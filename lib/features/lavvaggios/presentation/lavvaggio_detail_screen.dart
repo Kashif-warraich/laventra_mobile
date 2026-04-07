@@ -5,6 +5,7 @@ import '../bloc/lavvaggio_bloc.dart';
 import '../bloc/lavvaggio_event.dart';
 import '../bloc/lavvaggio_state.dart';
 import '../data/models/lavvaggio_model.dart';
+import '../data/models/lavvaggio_stats_model.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
@@ -32,6 +33,10 @@ class _LavvaggioDetailScreenState extends State<LavvaggioDetailScreen> {
   bool                       _eventsLoading = true;
   String                     _dateFilter    = 'today';
   DateTimeRange?             _customRange;
+
+  // Stats
+  LavvaggioStats? _stats;
+  bool            _statsLoading = false;
 
   @override
   void initState() {
@@ -129,10 +134,25 @@ class _LavvaggioDetailScreenState extends State<LavvaggioDetailScreen> {
   }
 
   Future<void> _loadEvents() async {
-    setState(() => _eventsLoading = true);
+    setState(() {
+      _eventsLoading = true;
+      _statsLoading  = true;
+    });
+
+    final range = _getDateRange();
+
+    // Dispatch stats load via BLoC
+    context.read<LavvaggioBloc>().add(
+      LavvaggioStatsLoadRequested(
+        widget.lavvaggio.id,
+        from: DateTime.tryParse(range['from']!),
+        to:   DateTime.tryParse(range['to']!),
+      ),
+    );
+
+    // Load raw events for the chart + list
     try {
-      final range = _getDateRange();
-      final res   = await ApiClient.instance.dio.get(
+      final res = await ApiClient.instance.dio.get(
         ApiConstants.events,
         queryParameters: {
           'lavvaggio_id': widget.lavvaggio.id,
@@ -323,6 +343,15 @@ class _LavvaggioDetailScreenState extends State<LavvaggioDetailScreen> {
             ),
           );
         }
+        if (state is LavvaggioStatsLoading) {
+          setState(() => _statsLoading = true);
+        }
+        if (state is LavvaggioStatsLoaded) {
+          setState(() {
+            _stats        = state.stats;
+            _statsLoading = false;
+          });
+        }
       },
       builder: (context, state) {
         final lavvaggio = switch (state) {
@@ -485,17 +514,18 @@ class _LavvaggioDetailScreenState extends State<LavvaggioDetailScreen> {
 
                       const SizedBox(height: 20),
 
-                      // ── Total Washes Stat ──
-                      _TotalWashCard(
-                        total:      _events.length,
-                        isLoading:  _eventsLoading,
-                        dateFilter: _dateFilter,
-                        customRange: _customRange,
-                      ),
+                      // ── Stats from API ──
+                      if (_statsLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child:   Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_stats != null)
+                        _StatsGrid(stats: _stats!),
 
                       const SizedBox(height: 24),
 
-                      // ── Chart ──
+                      // ── Chart (built from raw events) ──
                       if (!_eventsLoading) ...[
                         _SectionTitle(title: _chartTitle),
                         const SizedBox(height: 12),
@@ -564,6 +594,99 @@ class _LavvaggioDetailScreenState extends State<LavvaggioDetailScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+// ── Stats Grid (from real API) ────────────────────────────────────
+class _StatsGrid extends StatelessWidget {
+  final LavvaggioStats stats;
+  const _StatsGrid({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatCard(
+            icon:  Icons.water_drop_rounded,
+            label: 'Total Washes',
+            value: '${stats.totalWashes}',
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon:  Icons.timer_rounded,
+            label: 'Avg Duration',
+            value: stats.formattedAvgDuration,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final String   value;
+  final Color    color;
+  final bool     fullWidth;
+
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    this.fullWidth = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width:   fullWidth ? double.infinity : null,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color:        AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border:       Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding:     const EdgeInsets.all(8),
+            decoration:  BoxDecoration(
+              color:        color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color:    AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize:   20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -969,14 +1092,11 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completed  = event['completed'] == true;
     final plate      = event['vehicle_plate'] ?? '';
     final type       = event['vehicle_type']  ?? '';
     final startedAt  = DateTime.tryParse(event['started_at'] ?? '');
     final endedAt    = DateTime.tryParse(event['ended_at']   ?? '');
-    final duration   = event['duration_seconds'] as int?;
-    final statusColor = completed ? AppColors.success : AppColors.primary;
-    final statusLabel = completed ? 'COMPLETED' : 'IN PROGRESS';
+    final duration   = (event['duration_seconds'] as num?)?.toDouble();
 
     String fmt(DateTime? dt) {
       if (dt == null) return '—';
@@ -984,9 +1104,11 @@ class _EventCard extends StatelessWidget {
           '${dt.minute.toString().padLeft(2,'0')}';
     }
 
-    String fmtDur(int? s) {
+    String fmtDur(double? s) {
       if (s == null) return '';
-      return '${s ~/ 60}m ${s % 60}s';
+      final m = (s / 60).floor();
+      final sec = (s % 60).round();
+      return '${m}m ${sec}s';
     }
 
     return Container(
@@ -1002,7 +1124,7 @@ class _EventCard extends StatelessWidget {
             width:  4,
             height: 56,
             decoration: BoxDecoration(
-              color:        statusColor,
+              color:        AppColors.success,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -1032,9 +1154,7 @@ class _EventCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  completed
-                      ? '${fmt(startedAt)} → ${fmt(endedAt)}'
-                      : 'Started ${fmt(startedAt)}',
+                  '${fmt(startedAt)} → ${fmt(endedAt)}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
                   ),
@@ -1042,39 +1162,15 @@ class _EventCard extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color:        statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(
-                    color:      statusColor,
-                    fontSize:   9,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          if (duration != null)
+            Text(
+              fmtDur(duration),
+              style: const TextStyle(
+                color:      AppColors.textSecondary,
+                fontSize:   12,
+                fontFamily: 'monospace',
               ),
-              if (completed && duration != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  fmtDur(duration),
-                  style: const TextStyle(
-                    color:      AppColors.textSecondary,
-                    fontSize:   12,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ],
-            ],
-          ),
+            ),
         ],
       ),
     );

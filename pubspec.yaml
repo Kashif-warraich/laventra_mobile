@@ -1,5 +1,5 @@
-name: laventra_app
-description: "A new Flutter project."
+name: laventra_mobile
+description: "Laventra - Car Wash Management"
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 

@@ -20,12 +20,14 @@ class EventBloc extends Bloc<EventEvent, EventState> {
       ) async {
     emit(const EventLoading());
     try {
-      final events = await _repository.getEvents(
+      final result = await _repository.getEvents(
         lavvaggioId: event.lavvaggioId,
         from:        event.from,
         to:          event.to,
+        page:        1,
+        perPage:     25,
       );
-      emit(EventsLoaded(events));
+      emit(EventsLoaded(result.data, result.meta));
     } on DioException catch (e) {
       final msg = e.response?.data?['errors']?[0] ?? 'Failed to load events';
       emit(EventError(msg));
@@ -39,12 +41,14 @@ class EventBloc extends Bloc<EventEvent, EventState> {
       Emitter<EventState> emit,
       ) async {
     try {
-      final events = await _repository.getEvents(
+      final result = await _repository.getEvents(
         lavvaggioId: event.lavvaggioId,
         from:        event.from,
         to:          event.to,
+        page:        1,
+        perPage:     25,
       );
-      emit(EventsLoaded(events));
+      emit(EventsLoaded(result.data, result.meta));
     } on DioException catch (e) {
       final msg = e.response?.data?['errors']?[0] ?? 'Failed to load events';
       emit(EventError(msg));

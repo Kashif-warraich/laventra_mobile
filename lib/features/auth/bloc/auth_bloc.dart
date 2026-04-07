@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 import '../data/repositories/auth_repository.dart';
+import '../../../core/network/session_expired_notifier.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _repository;
+  late final StreamSubscription<void> _sessionExpiredSub;
 
   AuthBloc({required AuthRepository repository})
       : _repository = repository,
@@ -14,6 +17,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthStarted>(_onStarted);
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
+    on<AuthSessionExpired>(_onSessionExpired);
+
+    // Auto-logout whenever the API interceptor fires a 401
+    _sessionExpiredSub = SessionExpiredNotifier.instance.stream.listen((_) {
+      if (state is AuthAuthenticated) {
+        add(const AuthSessionExpired());
+      }
+    });
   }
 
   // Check stored token on app launch
@@ -62,12 +73,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  // Logout
+  // Manual logout
   Future<void> _onLogoutRequested(
       AuthLogoutRequested event,
       Emitter<AuthState> emit,
       ) async {
     await _repository.logout();
     emit(const AuthUnauthenticated());
+  }
+
+  // Triggered automatically when token is expired (401 from API)
+  Future<void> _onSessionExpired(
+      AuthSessionExpired event,
+      Emitter<AuthState> emit,
+      ) async {
+    // Storage already cleared by ApiClient interceptor
+    emit(const AuthSessionExpiredState());
+  }
+
+  @override
+  Future<void> close() {
+    _sessionExpiredSub.cancel();
+    return super.close();
   }
 }

@@ -14,6 +14,7 @@ class LavvaggioBloc extends Bloc<LavvaggioEvent, LavvaggioState> {
     on<LavvaggioDetailLoadRequested>(_onDetailLoad);
     on<LavvaggioUpdateRequested>(_onUpdate);
     on<LavvaggioRefreshRequested>(_onRefresh);
+    on<LavvaggioStatsLoadRequested>(_onStatsLoad);
   }
 
   Future<void> _onLoad(
@@ -22,8 +23,8 @@ class LavvaggioBloc extends Bloc<LavvaggioEvent, LavvaggioState> {
       ) async {
     emit(const LavvaggioLoading());
     try {
-      final list = await _repository.getLavvaggios();
-      emit(LavvaggiosLoaded(list));
+      final result = await _repository.getLavvaggios();
+      emit(LavvaggiosLoaded(result.data, result.meta));
     } on DioException catch (e) {
       final msg = e.response?.data?['errors']?[0] ?? 'Failed to load lavvaggios';
       emit(LavvaggioError(msg));
@@ -84,8 +85,28 @@ class LavvaggioBloc extends Bloc<LavvaggioEvent, LavvaggioState> {
       Emitter<LavvaggioState> emit,
       ) async {
     try {
-      final list = await _repository.getLavvaggios();
-      emit(LavvaggiosLoaded(list));
+      final result = await _repository.getLavvaggios();
+      emit(LavvaggiosLoaded(result.data, result.meta));
     } catch (_) {}
+  }
+
+  Future<void> _onStatsLoad(
+      LavvaggioStatsLoadRequested event,
+      Emitter<LavvaggioState> emit,
+      ) async {
+    emit(const LavvaggioStatsLoading());
+    try {
+      final stats = await _repository.getStats(
+        event.lavvaggioId,
+        from: event.from,
+        to:   event.to,
+      );
+      emit(LavvaggioStatsLoaded(stats));
+    } on DioException catch (e) {
+      final msg = e.response?.data?['errors']?[0] ?? 'Failed to load stats';
+      emit(LavvaggioError(msg));
+    } catch (_) {
+      emit(const LavvaggioError('An unexpected error occurred'));
+    }
   }
 }

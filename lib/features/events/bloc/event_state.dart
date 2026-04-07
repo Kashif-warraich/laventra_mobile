@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../data/models/event_model.dart';
+import '../../../../core/models/pagination_meta.dart';
 
 abstract class EventState extends Equatable {
   const EventState();
@@ -18,10 +19,11 @@ class EventLoading extends EventState {
 
 class EventsLoaded extends EventState {
   final List<EventModel> events;
-  const EventsLoaded(this.events);
+  final PaginationMeta   meta;
+  const EventsLoaded(this.events, this.meta);
 
   @override
-  List<Object?> get props => [events];
+  List<Object?> get props => [events, meta];
 }
 
 class EventError extends EventState {

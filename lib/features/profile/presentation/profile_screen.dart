@@ -366,9 +366,9 @@ class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({required this.user});
 
   Color _roleColor(String role) => switch (role) {
-    'admin' => AppColors.primary,
-    'owner' => const Color(0xFF7C3AED),
-    _       => AppColors.textSecondary,
+    'admin'       => AppColors.primary,
+    'super_admin' => const Color(0xFF7C3AED),
+    _             => AppColors.textSecondary,
   };
 
   Color _statusColor(String status) => switch (status) {

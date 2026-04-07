@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../data/models/lavvaggio_model.dart';
+import '../data/models/lavvaggio_stats_model.dart';
+import '../../../../core/models/pagination_meta.dart';
 
 abstract class LavvaggioState extends Equatable {
   const LavvaggioState();
@@ -18,10 +20,11 @@ class LavvaggioLoading extends LavvaggioState {
 
 class LavvaggiosLoaded extends LavvaggioState {
   final List<LavvaggioModel> lavvaggios;
-  const LavvaggiosLoaded(this.lavvaggios);
+  final PaginationMeta       meta;
+  const LavvaggiosLoaded(this.lavvaggios, this.meta);
 
   @override
-  List<Object?> get props => [lavvaggios];
+  List<Object?> get props => [lavvaggios, meta];
 }
 
 class LavvaggioDetailLoaded extends LavvaggioState {
@@ -54,4 +57,15 @@ class LavvaggioError extends LavvaggioState {
 
   @override
   List<Object?> get props => [message];
+}
+
+class LavvaggioStatsLoading extends LavvaggioState {
+  const LavvaggioStatsLoading();
+}
+
+class LavvaggioStatsLoaded extends LavvaggioState {
+  final LavvaggioStats stats;
+  const LavvaggioStatsLoaded(this.stats);
+  @override
+  List<Object?> get props => [stats];
 }
