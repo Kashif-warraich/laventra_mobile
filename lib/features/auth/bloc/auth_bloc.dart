@@ -61,6 +61,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email:    event.email,
         password: event.password,
       );
+
+      // Only admin (lavvaggio owner) can use the mobile app
+      if (user.role == 'super_admin') {
+        await _repository.logout();
+        emit(const AuthLoginFailure(
+          'Access denied. Please use the web dashboard.',
+        ));
+        return;
+      }
+
       emit(AuthAuthenticated(user));
     } on DioException catch (e) {
       final errors = e.response?.data?['errors'];
