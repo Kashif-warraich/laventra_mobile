@@ -15,4 +15,5 @@ class ApiConstants {
   static const String devices     = '/devices';
   static const String events        = '/car_wash_events';
   static const String carWashEvents = '/car_wash_events';
+  static const String deviceLogs    = '/device_logs';
 }
