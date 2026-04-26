@@ -7,6 +7,8 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../auth/data/models/user_model.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/storage/secure_storage.dart';
+import '../../../../core/services/biometric_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -30,6 +32,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _obscurePassword        = true;
   bool _obscureConfirmPassword = true;
+  bool _biometricEnabled       = false;
+  bool _biometricAvailable     = false;
+  bool _isFaceId               = false;
 
   @override
   void initState() {
@@ -44,6 +49,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     context.read<ProfileBloc>().add(
       ProfileLoadRequested(widget.user.id),
     );
+
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final available = await BiometricService.instance.isAvailable();
+    final enabled   = await SecureStorage.instance.getBiometricEnabled();
+    final faceId    = await BiometricService.instance.isFaceId();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled   = enabled;
+        _isFaceId           = faceId;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      // Confirm identity before enabling
+      final success = await BiometricService.instance.authenticate(
+        reason: 'Verify your identity to enable biometric login',
+      );
+      if (!success) return;
+    }
+    if (value) {
+      await SecureStorage.instance.setBiometricEnabled(true);
+    } else {
+      await SecureStorage.instance.clearBiometricCredentials();
+    }
+    if (mounted) {
+      setState(() => _biometricEnabled = value);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            value
+                ? '${_isFaceId ? 'Face ID' : 'Fingerprint'} login enabled'
+                : 'Biometric login disabled',
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -327,6 +376,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+                // ── Security ──
+                if (_biometricAvailable)
+                  _SectionCard(
+                    title: 'Security',
+                    icon:  Icons.security_rounded,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isFaceId
+                              ? Icons.face_unlock_outlined
+                              : Icons.fingerprint_rounded,
+                          color: AppColors.primary,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _isFaceId ? 'Face ID' : 'Fingerprint Login',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Sign in without entering your password',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value:    _biometricEnabled,
+                          onChanged: _toggleBiometric,
+                          activeColor: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ),
 
                 const SizedBox(height: 20),
 

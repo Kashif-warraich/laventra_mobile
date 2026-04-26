@@ -60,6 +60,12 @@ class _SplashScreenState extends State<SplashScreen>
           Navigator.pushReplacementNamed(context, '/home');
         } else if (state is AuthUnauthenticated) {
           Navigator.pushReplacementNamed(context, '/login');
+        } else if (state is AuthBiometricRequired) {
+          // Trigger Face ID prompt immediately — BLoC handles result
+          context.read<AuthBloc>().add(const AuthBiometricRequested());
+        } else if (state is AuthLoginFailure) {
+          // Biometric unlock failed — fall back to manual login
+          Navigator.pushReplacementNamed(context, '/login');
         }
       },
       child: Scaffold(

@@ -1,6 +1,7 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/storage/secure_storage.dart';
+import '../../../../core/services/push_notification_service.dart';
 import '../models/user_model.dart';
 
 class AuthRepository {
@@ -25,20 +26,32 @@ class AuthRepository {
     final token = data['token'] as String;
     final user  = UserModel.fromJson(data['user']);
 
-    // Persist both
+    // Persist session and biometric credentials
     await _storage.setToken(token);
     await _storage.setUser(user.toJsonString());
+    await _storage.setBiometricCredentials(email, password);
+
+    // Initialize push notifications and register FCM token with backend
+    try {
+      await PushNotificationService.instance.initialize();
+      await PushNotificationService.instance.registerToken();
+    } catch (_) {
+      // Non-fatal — push registration can be retried later
+    }
 
     return user;
   }
 
-  Future<void> logout() async {
+  Future<void> logout({bool preserveForBiometric = false}) async {
     try {
       await _dio.delete(ApiConstants.logout);
-    } finally {
-      // Always clear local storage even if API call fails
+    } catch (_) {}
+    if (!preserveForBiometric) {
       await _storage.clearAll();
     }
+    // If preserveForBiometric=true, local token+user stay in Keychain so Face ID
+    // can unlock the session on next launch (same pattern as banking apps).
+    // The server session is already invalidated above.
   }
 
   Future<UserModel?> getStoredUser() async {
@@ -50,5 +63,9 @@ class AuthRepository {
   Future<bool> hasToken() async {
     final token = await _storage.getToken();
     return token != null && token.isNotEmpty;
+  }
+
+  Future<({String email, String password})?> getBiometricCredentials() async {
+    return await _storage.getBiometricCredentials();
   }
 }

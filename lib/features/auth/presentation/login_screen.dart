@@ -5,6 +5,8 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/storage/secure_storage.dart';
+import '../../../core/services/biometric_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,7 +19,36 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey       = GlobalKey<FormState>();
   final _emailCtrl     = TextEditingController();
   final _passwordCtrl  = TextEditingController();
-  bool  _obscurePassword = true;
+  bool  _obscurePassword   = true;
+  bool  _biometricEnabled  = false;
+  bool  _isFaceId          = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final enabled   = await SecureStorage.instance.getBiometricEnabled();
+    final available = await BiometricService.instance.isAvailable();
+    final faceId    = await BiometricService.instance.isFaceId();
+    if (mounted) {
+      setState(() {
+        _biometricEnabled = enabled && available;
+        _isFaceId         = faceId;
+      });
+    }
+  }
+
+  Future<void> _biometricLogin() async {
+    final success = await BiometricService.instance.authenticate();
+    if (!mounted) return;
+    if (success) {
+      // Biometric passed — ask BLoC to restore session from stored token
+      context.read<AuthBloc>().add(const AuthBiometricRequested());
+    }
+  }
 
   @override
   void dispose() {
@@ -260,6 +291,32 @@ class _LoginScreenState extends State<LoginScreen> {
                                 )
                                     : const Text('Sign In'),
                               ),
+
+                              // ── Biometric button ──
+                              if (_biometricEnabled) ...[
+                                const SizedBox(height: 16),
+                                OutlinedButton.icon(
+                                  onPressed: isLoading ? null : _biometricLogin,
+                                  icon: Icon(
+                                    _isFaceId
+                                        ? Icons.face_unlock_outlined
+                                        : Icons.fingerprint_rounded,
+                                    size: 22,
+                                  ),
+                                  label: Text(
+                                    _isFaceId
+                                        ? 'Sign In with Face ID'
+                                        : 'Sign In with Fingerprint',
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize:
+                                        const Size(double.infinity, 52),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
