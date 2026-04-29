@@ -3,9 +3,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_logo.dart';
 import '../../../core/constants/app_constants.dart';
 
+/// Splash: dark gradient + ripple ring + glowing logo + loading dots.
+///
+/// Auth flow:
+///   AuthStarted dispatched after the entry animation. The router redirect
+///   handles the unauthenticated → /login transition.
+///   When biometric login is enabled the BLoC emits AuthBiometricRequired —
+///   we trigger the biometric prompt immediately so unlock feels native.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -13,42 +21,28 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double>   _fadeAnim;
-  late Animation<double>   _scaleAnim;
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  late final AnimationController _entry;
+  late final AnimationController _ripple;
+  late final AnimationController _glow;
 
   @override
   void initState() {
     super.initState();
+    _entry  = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
+    _ripple = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat();
+    _glow   = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat(reverse: true);
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
-
-    _scaleAnim = Tween<double>(begin: 0.8, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
-
-    _controller.forward();
-
-    // Check auth after animation starts
     Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        context.read<AuthBloc>().add(const AuthStarted());
-      }
+      if (mounted) context.read<AuthBloc>().add(const AuthStarted());
     });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _entry.dispose();
+    _ripple.dispose();
+    _glow.dispose();
     super.dispose();
   }
 
@@ -56,95 +50,75 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthAuthenticated) {
-          Navigator.pushReplacementNamed(context, '/home');
-        } else if (state is AuthUnauthenticated) {
-          Navigator.pushReplacementNamed(context, '/login');
-        } else if (state is AuthBiometricRequired) {
-          // Trigger Face ID prompt immediately — BLoC handles result
+        // Trigger Face ID / fingerprint prompt — BLoC handles the result
+        // and emits AuthAuthenticated or AuthUnauthenticated, which the
+        // router redirects on.
+        if (state is AuthBiometricRequired) {
           context.read<AuthBloc>().add(const AuthBiometricRequested());
-        } else if (state is AuthLoginFailure) {
-          // Biometric unlock failed — fall back to manual login
-          Navigator.pushReplacementNamed(context, '/login');
         }
       },
       child: Scaffold(
+        backgroundColor: AppTokens.bg,
         body: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0F172A),
-                Color(0xFF1E3A5F),
-                AppColors.primary,
-              ],
+            gradient: RadialGradient(
+              center:  Alignment.topCenter,
+              radius:  1.2,
+              colors:  [Color(0xFF112340), AppTokens.bg],
             ),
           ),
           child: Center(
             child: FadeTransition(
-              opacity: _fadeAnim,
+              opacity: CurvedAnimation(parent: _entry, curve: Curves.easeOut),
               child: ScaleTransition(
-                scale: _scaleAnim,
+                scale: Tween<double>(begin: 0.85, end: 1).animate(
+                  CurvedAnimation(parent: _entry, curve: Curves.elasticOut),
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          '🚗',
-                          style: TextStyle(fontSize: 52),
-                        ),
+                    SizedBox(
+                      width: 220, height: 220,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          _Ripple(ctrl: _ripple),
+                          AnimatedBuilder(
+                            animation: _glow,
+                            builder: (_, child) => Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:        AppTokens.blue.withOpacity(0.25 + 0.25 * _glow.value),
+                                    blurRadius:   40 + 30 * _glow.value,
+                                    spreadRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: child,
+                            ),
+                            child: const AppLogo(size: 120),
+                          ),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 24),
-
-                    // App name
+                    const SizedBox(height: 8),
                     Text(
                       AppConstants.appName,
                       style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        color: Colors.white,
+                        color: AppTokens.tp,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.5,
                       ),
                     ),
-
-                    const SizedBox(height: 8),
-
-                    // Tagline
+                    const SizedBox(height: 6),
                     Text(
                       AppConstants.appTagline,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.7),
-                        letterSpacing: 0.3,
-                      ),
+                      style: const TextStyle(color: AppTokens.ts, fontSize: 14, letterSpacing: 0.3),
                     ),
-
-                    const SizedBox(height: 60),
-
-                    // Loading indicator
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 36),
+                    _LoadingDots(),
                   ],
                 ),
               ),
@@ -152,6 +126,77 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LoadingDots extends StatefulWidget {
+  @override
+  State<_LoadingDots> createState() => _LoadingDotsState();
+}
+
+class _LoadingDotsState extends State<_LoadingDots> with SingleTickerProviderStateMixin {
+  late final AnimationController _ac;
+  @override
+  void initState() {
+    super.initState();
+    _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..repeat();
+  }
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ac,
+      builder: (_, __) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (i) {
+          final phase = ((_ac.value + i * 0.33) % 1.0);
+          final t     = (1 - (phase - 0.5).abs() * 2).clamp(0.0, 1.0);
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 5),
+            width:  8, height: 8,
+            decoration: BoxDecoration(
+              color: AppTokens.blue.withOpacity(0.3 + 0.7 * t),
+              shape: BoxShape.circle,
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _Ripple extends StatelessWidget {
+  final AnimationController ctrl;
+  const _Ripple({required this.ctrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: ctrl,
+      builder: (_, __) {
+        return Stack(
+          alignment: Alignment.center,
+          children: List.generate(2, (i) {
+            final phase = ((ctrl.value + i * 0.5) % 1.0);
+            return Opacity(
+              opacity: (1 - phase).clamp(0.0, 1.0),
+              child: Container(
+                width:  90 + 130 * phase,
+                height: 90 + 130 * phase,
+                decoration: BoxDecoration(
+                  shape:  BoxShape.circle,
+                  border: Border.all(color: AppTokens.blue.withOpacity(0.4)),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

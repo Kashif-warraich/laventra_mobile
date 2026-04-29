@@ -1,12 +1,16 @@
 class LavvaggioModel {
-  final int              id;
-  final String           name;
-  final String           address;
-  final String           city;
-  final String           country;
-  final String           status;
+  final int                id;
+  final String             name;
+  final String             address;
+  final String             city;
+  final String             country;
+  final String             status;             // 'active' | 'inactive' (admin-controlled)
+  final String             operationalStatus; // 'online' | 'offline' (device-derived)
+  final int                aiCount;
+  final int                cameraCount;
+  final int                todayWashes;
+  final int                monthlyWashes;
   final List<PartnerModel> partners;
-  final DeviceSummary?   device;
 
   const LavvaggioModel({
     required this.id,
@@ -15,11 +19,16 @@ class LavvaggioModel {
     required this.city,
     required this.country,
     required this.status,
+    required this.operationalStatus,
+    required this.aiCount,
+    required this.cameraCount,
+    required this.todayWashes,
+    required this.monthlyWashes,
     this.partners = const [],
-    this.device,
   });
 
   bool get isActive => status == 'active';
+  bool get isOnline => operationalStatus == 'online';
 
   String get fullAddress => '$address, $city, $country';
 
@@ -29,16 +38,20 @@ class LavvaggioModel {
   }
 
   factory LavvaggioModel.fromJson(Map<String, dynamic> json) => LavvaggioModel(
-    id:       json['id'],
-    name:     json['name'],
-    address:  json['address'],
-    city:     json['city'],
-    country:  json['country'],
-    status:   json['status'],
+    id:                json['id'] as int,
+    name:              json['name'] as String,
+    address:           (json['address'] ?? '') as String,
+    city:              (json['city']    ?? '') as String,
+    country:           (json['country'] ?? '') as String,
+    status:            (json['status']             ?? 'active')  as String,
+    operationalStatus: (json['operational_status'] ?? 'offline') as String,
+    aiCount:           (json['ai_count']            ?? 0) as int,
+    cameraCount:       (json['camera_count']        ?? 0) as int,
+    todayWashes:       (json['today_washes']        ?? 0) as int,
+    monthlyWashes:     (json['monthly_washes']      ?? 0) as int,
     partners: (json['partners'] as List<dynamic>? ?? [])
         .map((p) => PartnerModel.fromJson(p as Map<String, dynamic>))
         .toList(),
-    device:   json['device'] != null ? DeviceSummary.fromJson(json['device']) : null,
   );
 }
 
@@ -58,35 +71,10 @@ class PartnerModel {
   String get fullName => '$firstName $lastName';
 
   factory PartnerModel.fromJson(Map<String, dynamic> json) => PartnerModel(
-    id:        json['id'],
-    firstName: json['first_name'],
-    lastName:  json['last_name'],
-    email:     json['email'],
+    id:        json['id']         as int,
+    firstName: json['first_name'] as String,
+    lastName:  json['last_name']  as String,
+    email:     (json['email'] ?? '') as String,
   );
 }
 
-class DeviceSummary {
-  final int    id;
-  final String serialNumber;
-  final String status;
-  final String firmwareVersion;
-  final String? lastSeenAt;
-
-  const DeviceSummary({
-    required this.id,
-    required this.serialNumber,
-    required this.status,
-    required this.firmwareVersion,
-    this.lastSeenAt,
-  });
-
-  bool get isOnline => status == 'active';
-
-  factory DeviceSummary.fromJson(Map<String, dynamic> json) => DeviceSummary(
-    id:              json['id'],
-    serialNumber:    json['serial_number'],
-    status:          json['status'],
-    firmwareVersion: json['firmware_version'],
-    lastSeenAt:      json['last_seen_at'],
-  );
-}
