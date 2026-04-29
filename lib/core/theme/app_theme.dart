@@ -1,137 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_tokens.dart';
 
+/// Backward-compat shim. Older code imports `AppColors.primary` etc. We keep
+/// those names but point them at the new dark tokens so existing callers
+/// don't break while we migrate screens to AppTokens directly.
 class AppColors {
   AppColors._();
 
-  static const Color primary      = Color(0xFF1677FF);
-  static const Color primaryDark  = Color(0xFF0958D9);
-  static const Color background   = Color(0xFFF0F2F5);
-  static const Color surface      = Color(0xFFFFFFFF);
-  static const Color dark         = Color(0xFF0F172A);
-  static const Color textPrimary  = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color error        = Color(0xFFFF4D4F);
-  static const Color success      = Color(0xFF52C41A);
-  static const Color warning      = Color(0xFFFAAD14);
-  static const Color border       = Color(0xFFE5E7EB);
+  static const Color primary       = AppTokens.blue;
+  static const Color primaryDark   = AppTokens.blueL;
+  static const Color background    = AppTokens.bg;
+  static const Color surface       = AppTokens.bgCard;
+  static const Color dark          = AppTokens.bg;
+  static const Color textPrimary   = AppTokens.tp;
+  static const Color textSecondary = AppTokens.ts;
+  static const Color error         = AppTokens.red;
+  static const Color success       = AppTokens.teal;
+  static const Color warning       = AppTokens.amber;
+  static const Color border        = AppTokens.border;
 
-  // Status colors
-  static const Color active    = Color(0xFF52C41A);
-  static const Color inactive  = Color(0xFFFAAD14);
-  static const Color suspended = Color(0xFFFF4D4F);
+  static const Color active    = AppTokens.teal;
+  static const Color inactive  = AppTokens.amber;
+  static const Color suspended = AppTokens.red;
 }
 
 class AppTheme {
   AppTheme._();
 
+  static TextTheme get _baseTextTheme => GoogleFonts.plusJakartaSansTextTheme(
+    ThemeData(brightness: Brightness.dark).textTheme,
+  );
+
   static ThemeData get theme => ThemeData(
     useMaterial3: true,
+    brightness:   Brightness.dark,
+    scaffoldBackgroundColor: AppTokens.bg,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      primary: AppColors.primary,
-      surface: AppColors.surface,
-      error: AppColors.error,
+      seedColor:  AppTokens.blue,
+      brightness: Brightness.dark,
+      primary:    AppTokens.blue,
+      surface:    AppTokens.bgCard,
+      error:      AppTokens.red,
+      onPrimary:  Colors.white,
+      onSurface:  AppTokens.tp,
     ),
-    scaffoldBackgroundColor: AppColors.background,
-    textTheme: GoogleFonts.interTextTheme().copyWith(
-      displayLarge: GoogleFonts.inter(
-        fontSize: 32,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      displayMedium: GoogleFonts.inter(
-        fontSize: 24,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      titleLarge: GoogleFonts.inter(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
-      ),
-      titleMedium: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
-      ),
-      bodyLarge: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: AppColors.textPrimary,
-      ),
-      bodyMedium: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: AppColors.textSecondary,
-      ),
-      labelLarge: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: AppColors.surface,
-      ),
+    textTheme: _baseTextTheme.copyWith(
+      displayLarge:  GoogleFonts.plusJakartaSans(fontSize: 32, fontWeight: FontWeight.w800, color: AppTokens.tp),
+      displayMedium: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800, color: AppTokens.tp),
+      titleLarge:    GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w700, color: AppTokens.tp),
+      titleMedium:   GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700, color: AppTokens.tp),
+      bodyLarge:     GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w500, color: AppTokens.tp),
+      bodyMedium:    GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w400, color: AppTokens.ts),
+      bodySmall:     GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w400, color: AppTokens.ts),
+      labelLarge:    GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surface,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 16,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.error, width: 2),
-      ),
+      fillColor: AppTokens.bgEl,
+      hintStyle: GoogleFonts.plusJakartaSans(color: AppTokens.tm, fontSize: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border:         _border(AppTokens.border),
+      enabledBorder:  _border(AppTokens.border),
+      focusedBorder:  _border(AppTokens.blue, 1.6),
+      errorBorder:    _border(AppTokens.red),
+      focusedErrorBorder: _border(AppTokens.red, 1.6),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.surface,
-        minimumSize: const Size(double.infinity, 52),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: GoogleFonts.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-        elevation: 0,
+        backgroundColor: AppTokens.blue,
+        foregroundColor: Colors.white,
+        minimumSize:     const Size(double.infinity, 50),
+        shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTokens.rMd)),
+        textStyle:       GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700),
+        elevation:       0,
       ),
     ),
     cardTheme: CardThemeData(
-      color: AppColors.surface,
+      color:    AppTokens.bgCard,
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
+      shape:    RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTokens.rLg),
+        side:         const BorderSide(color: AppTokens.border),
       ),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColors.surface,
-      elevation: 0,
-      centerTitle: false,
-      titleTextStyle: GoogleFonts.inter(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      backgroundColor: AppTokens.bg,
+      surfaceTintColor: AppTokens.bg,
+      elevation:        0,
+      centerTitle:      false,
+      titleTextStyle:   GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: AppTokens.tp),
+      iconTheme:        const IconThemeData(color: AppTokens.tp),
     ),
+    dividerTheme: const DividerThemeData(color: AppTokens.border, space: 1, thickness: 1),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppTokens.bgEl,
+      contentTextStyle: GoogleFonts.plusJakartaSans(color: AppTokens.tp, fontSize: 13, fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTokens.rMd)),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+
+  static OutlineInputBorder _border(Color c, [double width = 1]) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppTokens.rMd),
+    borderSide:   BorderSide(color: c, width: width),
   );
 }
