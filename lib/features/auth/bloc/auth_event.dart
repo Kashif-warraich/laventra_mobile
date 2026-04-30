@@ -31,3 +31,7 @@ class AuthLogoutRequested extends AuthEvent {
 class AuthSessionExpired extends AuthEvent {
   const AuthSessionExpired();
 }
+
+class AuthBiometricRequested extends AuthEvent {
+  const AuthBiometricRequested();
+}

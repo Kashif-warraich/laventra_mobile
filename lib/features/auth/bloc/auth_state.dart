@@ -52,3 +52,12 @@ class AuthLoginFailure extends AuthState {
 class AuthSessionExpiredState extends AuthUnauthenticated {
   const AuthSessionExpiredState();
 }
+
+// Biometric prompt required — user may be null after logout (re-login via stored credentials)
+class AuthBiometricRequired extends AuthState {
+  final UserModel? user;
+  const AuthBiometricRequired([this.user]);
+
+  @override
+  List<Object?> get props => [user];
+}

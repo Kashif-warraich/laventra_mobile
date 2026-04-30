@@ -24,6 +24,8 @@ class EventBloc extends Bloc<EventEvent, EventState> {
         lavvaggioId: event.lavvaggioId,
         from:        event.from,
         to:          event.to,
+        status:      event.status,
+        search:      event.search,
         page:        1,
         perPage:     25,
       );
@@ -45,6 +47,8 @@ class EventBloc extends Bloc<EventEvent, EventState> {
         lavvaggioId: event.lavvaggioId,
         from:        event.from,
         to:          event.to,
+        status:      event.status,
+        search:      event.search,
         page:        1,
         perPage:     25,
       );

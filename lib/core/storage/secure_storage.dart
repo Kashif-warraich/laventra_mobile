@@ -37,4 +37,40 @@ class SecureStorage {
   Future<void> clearAll() async {
     await _storage.deleteAll();
   }
+
+  // Clears auth session but preserves biometric credentials and preference
+  Future<void> clearSession() async {
+    await _storage.delete(key: AppConstants.tokenKey);
+    await _storage.delete(key: AppConstants.userKey);
+  }
+
+  Future<bool> getBiometricEnabled() async {
+    final val = await _storage.read(key: AppConstants.biometricEnabledKey);
+    return val == 'true';
+  }
+
+  Future<void> setBiometricEnabled(bool enabled) async {
+    await _storage.write(
+      key: AppConstants.biometricEnabledKey,
+      value: enabled.toString(),
+    );
+  }
+
+  Future<void> setBiometricCredentials(String email, String password) async {
+    await _storage.write(key: AppConstants.biometricEmailKey, value: email);
+    await _storage.write(key: AppConstants.biometricPasswordKey, value: password);
+  }
+
+  Future<({String email, String password})?> getBiometricCredentials() async {
+    final email    = await _storage.read(key: AppConstants.biometricEmailKey);
+    final password = await _storage.read(key: AppConstants.biometricPasswordKey);
+    if (email != null && password != null) return (email: email, password: password);
+    return null;
+  }
+
+  Future<void> clearBiometricCredentials() async {
+    await _storage.delete(key: AppConstants.biometricEmailKey);
+    await _storage.delete(key: AppConstants.biometricPasswordKey);
+    await _storage.delete(key: AppConstants.biometricEnabledKey);
+  }
 }

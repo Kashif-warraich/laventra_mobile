@@ -58,7 +58,7 @@ class LavvaggioBloc extends Bloc<LavvaggioEvent, LavvaggioState> {
       LavvaggioDetailLoaded  s => s.lavvaggio,
       LavvaggioUpdating      s => s.lavvaggio,
       LavvaggioUpdateSuccess s => s.lavvaggio,
-      _                        => null,
+      _                        => event.current,  // entered from list screen
     };
     if (current == null) return;
 

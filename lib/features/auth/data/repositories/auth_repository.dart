@@ -25,20 +25,24 @@ class AuthRepository {
     final token = data['token'] as String;
     final user  = UserModel.fromJson(data['user']);
 
-    // Persist both
+    // Persist session and biometric credentials
     await _storage.setToken(token);
     await _storage.setUser(user.toJsonString());
+    await _storage.setBiometricCredentials(email, password);
 
     return user;
   }
 
-  Future<void> logout() async {
+  Future<void> logout({bool preserveForBiometric = false}) async {
     try {
       await _dio.delete(ApiConstants.logout);
-    } finally {
-      // Always clear local storage even if API call fails
+    } catch (_) {}
+    if (!preserveForBiometric) {
       await _storage.clearAll();
     }
+    // If preserveForBiometric=true, local token+user stay in Keychain so Face ID
+    // can unlock the session on next launch (same pattern as banking apps).
+    // The server session is already invalidated above.
   }
 
   Future<UserModel?> getStoredUser() async {
@@ -50,5 +54,9 @@ class AuthRepository {
   Future<bool> hasToken() async {
     final token = await _storage.getToken();
     return token != null && token.isNotEmpty;
+  }
+
+  Future<({String email, String password})?> getBiometricCredentials() async {
+    return await _storage.getBiometricCredentials();
   }
 }
