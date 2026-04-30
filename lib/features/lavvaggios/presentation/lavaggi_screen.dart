@@ -37,34 +37,20 @@ class _LavaggiScreenState extends State<LavaggiScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Lavaggi',
-                          style: TextStyle(color: AppTokens.tp, fontSize: 22, fontWeight: FontWeight.w800)),
-                        SizedBox(height: 3),
-                        Text('Manage your car wash points',
-                          style: TextStyle(color: AppTokens.ts, fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => AppAlerts.info(context, 'Adding lavaggi is admin-only — use the web dashboard'),
-                    child: Container(
-                      width: 38, height: 38,
-                      decoration: BoxDecoration(
-                        color: AppTokens.blue,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
-                    ),
-                  ),
-                ],
+            const Padding(
+              padding: EdgeInsets.fromLTRB(18, 12, 18, 14),
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Lavaggi',
+                      style: TextStyle(color: AppTokens.tp, fontSize: 22, fontWeight: FontWeight.w800)),
+                    SizedBox(height: 3),
+                    Text('Manage your car wash points',
+                      style: TextStyle(color: AppTokens.ts, fontSize: 13)),
+                  ],
+                ),
               ),
             ),
             Expanded(

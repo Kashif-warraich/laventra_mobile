@@ -64,12 +64,20 @@ class AppRouter {
       initialLocation:   '/splash',
       refreshListenable: _AuthListenable(auth),
       redirect: (context, state) {
-        final s   = auth.state;
-        final loc = state.matchedLocation;
-
-        if (loc == '/splash') return null;          // splash decides itself
+        final s        = auth.state;
+        final loc      = state.matchedLocation;
         final isAuthed = s is AuthAuthenticated;
         final atLogin  = loc == '/login';
+        final atSplash = loc == '/splash';
+
+        if (atSplash) {
+          // Navigate away from splash once auth state is resolved
+          if (isAuthed) return '/home';
+          if (s is AuthUnauthenticated || s is AuthSessionExpiredState) return '/login';
+          // AuthInitial / AuthLoading / AuthBiometricRequired — stay on splash
+          return null;
+        }
+
         if (!isAuthed && !atLogin) return '/login';
         if (isAuthed  &&  atLogin) return '/home';
         return null;

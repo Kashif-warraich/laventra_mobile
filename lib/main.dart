@@ -1,11 +1,9 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/network/api_client.dart';
 import 'core/router/app_router.dart';
-import 'core/services/push_notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_tokens.dart';
 import 'core/widgets/no_scroll_glow.dart';
@@ -28,10 +26,6 @@ import 'features/reports/data/repositories/report_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Firebase first — push_notification_service relies on it being ready
-  // before any FirebaseMessaging call inside auth_repository.login().
-  await Firebase.initializeApp();
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -88,17 +82,7 @@ class _LaventraAppState extends State<LaventraApp> {
     _report  = ReportBloc(repository: ReportRepository());
     _profile = ProfileBloc(repository: ProfileRepository());
 
-    _fcmAuthSub = _auth.stream.listen((state) async {
-      if (state is AuthAuthenticated) {
-        try {
-          await PushNotificationService.instance.initialize();
-          await PushNotificationService.instance.registerToken();
-        } catch (_) {
-          // Non-fatal — backend will work without push, user just won't get
-          // system tray alerts until next launch.
-        }
-      }
-    });
+    _fcmAuthSub = null; // Push notifications disabled
   }
 
   @override

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:open_file/open_file.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_alert.dart';
@@ -23,6 +25,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final _repo = ReportRepository();
   Timer?   _pollTimer;
   String?  _lastFlashShown;
+  final Set<int> _busy = {}; // report IDs currently being fetched
 
   @override
   void initState() {
@@ -48,15 +51,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Future<void> _download(ReportModel report) async {
-    AppAlerts.info(context, 'Downloading ${report.name}…');
+  Future<void> _preview(ReportModel report) async {
+    if (_busy.contains(report.id)) return;
+    setState(() => _busy.add(report.id));
     try {
-      final file = await _repo.downloadReport(report);
-      if (mounted) AppAlerts.success(context, 'Saved to ${file.path}');
-    } catch (e) {
-      if (mounted) AppAlerts.error(context, 'Download failed');
+      final file   = await _repo.fetchReportFile(report);
+      final result = await OpenFile.open(file.path);
+      if (mounted && result.type != ResultType.done) {
+        AppAlerts.error(context, 'Cannot open file: ${result.message}');
+      }
+    } catch (_) {
+      if (mounted) AppAlerts.error(context, 'Preview failed');
+    } finally {
+      if (mounted) setState(() => _busy.remove(report.id));
     }
   }
+
+  Future<void> _download(ReportModel report) async {
+    if (_busy.contains(report.id)) return;
+    setState(() => _busy.add(report.id));
+    try {
+      final file = await _repo.fetchReportFile(report);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: _mimeType(report.format))],
+        subject: report.name,
+      );
+    } catch (_) {
+      if (mounted) AppAlerts.error(context, 'Download failed');
+    } finally {
+      if (mounted) setState(() => _busy.remove(report.id));
+    }
+  }
+
+  String _mimeType(String format) => switch (format) {
+    'pdf'  => 'application/pdf',
+    'csv'  => 'text/csv',
+    'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    _      => 'application/octet-stream',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +141,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           itemCount: state.reports.length,
           itemBuilder: (_, i) => _ReportCard(
             report:     state.reports[i],
+            busy:       _busy.contains(state.reports[i].id),
+            onPreview:  () => _preview(state.reports[i]),
             onDownload: () => _download(state.reports[i]),
           ),
         ),
@@ -160,9 +194,16 @@ class _Header extends StatelessWidget {
 
 class _ReportCard extends StatelessWidget {
   final ReportModel  report;
+  final bool         busy;
+  final VoidCallback onPreview;
   final VoidCallback onDownload;
 
-  const _ReportCard({required this.report, required this.onDownload});
+  const _ReportCard({
+    required this.report,
+    required this.busy,
+    required this.onPreview,
+    required this.onDownload,
+  });
 
   Color get _formatColor {
     switch (report.format) {
@@ -244,10 +285,17 @@ class _ReportCard extends StatelessWidget {
                 ),
               ),
               if (report.isReady) ...[
-                _IconBtn(icon: Icons.visibility_outlined, color: AppTokens.blue,
-                  onTap: () => AppAlerts.info(context, 'Preview ${report.name}')),
-                const SizedBox(width: 6),
-                _IconBtn(icon: Icons.download_rounded, color: AppTokens.teal, onTap: onDownload),
+                if (busy)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTokens.blue)),
+                  )
+                else ...[
+                  _IconBtn(icon: Icons.visibility_outlined, color: AppTokens.blue, onTap: onPreview),
+                  const SizedBox(width: 6),
+                  _IconBtn(icon: Icons.download_rounded, color: AppTokens.teal, onTap: onDownload),
+                ],
               ],
             ],
           ),

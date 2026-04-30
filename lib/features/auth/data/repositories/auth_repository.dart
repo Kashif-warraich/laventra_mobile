@@ -1,7 +1,6 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/storage/secure_storage.dart';
-import '../../../../core/services/push_notification_service.dart';
 import '../models/user_model.dart';
 
 class AuthRepository {
@@ -30,14 +29,6 @@ class AuthRepository {
     await _storage.setToken(token);
     await _storage.setUser(user.toJsonString());
     await _storage.setBiometricCredentials(email, password);
-
-    // Initialize push notifications and register FCM token with backend
-    try {
-      await PushNotificationService.instance.initialize();
-      await PushNotificationService.instance.registerToken();
-    } catch (_) {
-      // Non-fatal — push registration can be retried later
-    }
 
     return user;
   }

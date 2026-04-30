@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_alert.dart';
-import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/sub_header.dart';
 import '../bloc/lavvaggio_bloc.dart';
 import '../bloc/lavvaggio_event.dart';
@@ -45,6 +44,7 @@ class _LavaggioSettingsScreenState extends State<LavaggioSettingsScreen> {
   void _save() {
     context.read<LavvaggioBloc>().add(LavvaggioUpdateRequested(
       lavvaggioId: widget.lavvaggio.id,
+      current:     widget.lavvaggio,
       data: {
         'name':    _nameCtrl.text.trim(),
         'address': _addrCtrl.text.trim(),
@@ -115,32 +115,6 @@ class _LavaggioSettingsScreenState extends State<LavaggioSettingsScreen> {
                           ),
                         );
                       },
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity, height: 50,
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          final ok = await ConfirmDialog.show(
-                            context,
-                            title:        'Remove Location',
-                            message:      'Remove "${widget.lavvaggio.name}"? This action cannot be undone.',
-                            confirmLabel: 'Remove',
-                            destructive:  true,
-                          );
-                          if (ok == true && context.mounted) {
-                            AppAlerts.info(context, 'Lavaggio removal is admin-only — use the web dashboard');
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: AppTokens.red.withOpacity(0.12),
-                          foregroundColor: AppTokens.red,
-                          side: BorderSide(color: AppTokens.red.withOpacity(0.4)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: const Text('Remove Location',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-                      ),
                     ),
                   ],
                 ),

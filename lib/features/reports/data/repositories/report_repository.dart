@@ -60,10 +60,10 @@ class ReportRepository {
     await _dio.delete('${ApiConstants.reports}/$id');
   }
 
-  /// Streams the file to the device's downloads/temp dir and returns the
-  /// absolute path. Caller decides what to do (open via OS, share, etc.).
-  Future<File> downloadReport(ReportModel report) async {
-    final dir  = await getApplicationDocumentsDirectory();
+  /// Downloads the report to the temp cache dir and returns the [File].
+  /// Caller decides what to do — open for preview or share for saving.
+  Future<File> fetchReportFile(ReportModel report) async {
+    final dir  = await getTemporaryDirectory();
     final path = '${dir.path}/${_safeFilename(report.name)}.${report.format}';
     await _dio.download(
       ApiConstants.reportDownload(report.id),

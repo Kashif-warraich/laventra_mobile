@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../data/models/lavvaggio_model.dart';
 
 abstract class LavvaggioEvent extends Equatable {
   const LavvaggioEvent();
@@ -22,13 +23,15 @@ class LavvaggioDetailLoadRequested extends LavvaggioEvent {
 class LavvaggioUpdateRequested extends LavvaggioEvent {
   final int                  lavvaggioId;
   final Map<String, dynamic> data;
+  final LavvaggioModel?      current; // fallback when bloc state is the list (not detail)
   const LavvaggioUpdateRequested({
     required this.lavvaggioId,
     required this.data,
+    this.current,
   });
 
   @override
-  List<Object?> get props => [lavvaggioId, data];
+  List<Object?> get props => [lavvaggioId, data, current];
 }
 
 class LavvaggioRefreshRequested extends LavvaggioEvent {
