@@ -26,15 +26,20 @@ import '../../features/reports/presentation/create_report_screen.dart';
 
 import '../../features/notifications/presentation/notifications_screen.dart';
 
+import '../../features/devices/presentation/all_devices_screen.dart';
+
 import '../../features/device_logs/bloc/device_log_bloc.dart';
 import '../../features/device_logs/data/repositories/device_log_repository.dart';
 import '../../features/device_logs/presentation/device_logs_screen.dart';
+import '../../features/profile/presentation/camera_config_screen.dart';
+import '../../features/profile/presentation/biometric_settings_screen.dart';
 
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/account_settings_screen.dart';
 import '../../features/profile/presentation/notification_settings_screen.dart';
-import '../../features/profile/presentation/camera_config_screen.dart';
 import '../../features/profile/presentation/network_screen.dart';
+import '../../features/profile/presentation/reset_password_screen.dart';
+import '../../features/profile/presentation/privacy_security_screen.dart';
 
 import '../../features/devices/data/repositories/device_repository.dart';
 import '../../features/events/data/repositories/event_repository.dart';
@@ -121,12 +126,15 @@ class AppRouter {
         ),
 
         // ── Top-level sub-screens (no bottom nav) ─────────────────────────
+        GoRoute(path: '/devices/all', builder: (_, st) {
+          final lavvaggioId = st.uri.queryParameters['lavvaggioId'];
+          return AllDevicesScreen(lavvaggioId: lavvaggioId);
+        }),
         GoRoute(path: '/notifications',           builder: (_, __) => const NotificationsScreen()),
         GoRoute(path: '/device-logs',             builder: (_, __) => BlocProvider(
           create: (_) => DeviceLogBloc(repository: DeviceLogRepository()),
           child: const DeviceLogsScreen(),
         )),
-        GoRoute(path: '/profile/biometric',       builder: (_, __) => const _NotImplementedScreen(title: 'Biometric Login')),
         GoRoute(path: '/events/:id',              builder: (_, st)  => EventDetailScreen(eventId: int.parse(st.pathParameters['id']!))),
         GoRoute(path: '/lavaggi/:id/settings',    builder: (_, st)  {
           final extra = st.extra;
@@ -136,9 +144,11 @@ class AppRouter {
         GoRoute(path: '/reports/new',             builder: (_, __) => const CreateReportScreen()),
         GoRoute(path: '/profile/account',         builder: (_, __) => const AccountSettingsScreen()),
         GoRoute(path: '/profile/notifications',   builder: (_, __) => const NotificationSettingsScreen()),
-        GoRoute(path: '/profile/camera',          builder: (_, __) => const CameraConfigScreen()),
         GoRoute(path: '/profile/network',         builder: (_, __) => const NetworkScreen()),
-        GoRoute(path: '/profile/privacy',         builder: (_, __) => const _NotImplementedScreen(title: 'Privacy & Security')),
+        GoRoute(path: '/profile/reset-password',  builder: (_, __) => const ResetPasswordScreen()),
+        GoRoute(path: '/profile/privacy',         builder: (_, __) => const PrivacySecurityScreen()),
+        GoRoute(path: '/profile/biometric',       builder: (_, __) => const BiometricSettingsScreen()),
+        GoRoute(path: '/profile/camera',          builder: (_, __) => const CameraConfigScreen()),
       ],
     );
   }
@@ -157,23 +167,5 @@ class _AuthListenable extends ChangeNotifier {
   void dispose() {
     _sub.cancel();
     super.dispose();
-  }
-}
-
-/// Stub for routes that point to screens we have not yet built (Privacy
-/// & Security). Linked from Profile menu.
-class _NotImplementedScreen extends StatelessWidget {
-  final String title;
-  const _NotImplementedScreen({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF080F1E),
-      appBar: AppBar(title: Text(title)),
-      body: const Center(
-        child: Text('Coming soon', style: TextStyle(color: Color(0xFF6A8FAD))),
-      ),
-    );
   }
 }

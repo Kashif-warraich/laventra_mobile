@@ -17,12 +17,8 @@ class ProfileScreen extends StatelessWidget {
     final menu = <_MenuItem>[
       _MenuItem(icon: Icons.person_outline_rounded,        label: 'Account Settings',      sub: 'Name, email, password',     route: '/profile/account'),
       _MenuItem(icon: Icons.notifications_outlined,        label: 'Notifications',          sub: 'Alert preferences',         route: '/profile/notifications'),
-      _MenuItem(icon: Icons.fingerprint_rounded,           label: 'Biometric Login',        sub: 'Face ID / Fingerprint',     route: '/profile/biometric'),
-      _MenuItem(icon: Icons.memory_rounded,                label: 'Camera & AI Config',     sub: 'Detection settings',        route: '/profile/camera'),
-      _MenuItem(icon: Icons.history_rounded,               label: 'Device Logs',            sub: 'Online/offline history',    route: '/device-logs'),
       _MenuItem(icon: Icons.wifi_rounded,                  label: 'Network & Connectivity', sub: 'Connection status',         route: '/profile/network'),
-      _MenuItem(icon: Icons.shield_outlined,               label: 'Privacy & Security',     sub: '2FA, sessions',             route: '/profile/privacy'),
-      _MenuItem(icon: Icons.description_outlined,          label: 'Reports',                sub: 'Generate & schedule',       route: '/reports', tabSwitch: true),
+      _MenuItem(icon: Icons.shield_outlined,               label: 'Privacy & Security',     sub: 'Terms, privacy policy',     route: '/profile/privacy'),
     ];
 
     return Scaffold(
@@ -43,6 +39,12 @@ class ProfileScreen extends StatelessWidget {
                   )),
                   const SizedBox(height: 6),
                   _LogoutTile(onTap: () => _confirmLogout(context)),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Version 1.0.0',
+                    style: TextStyle(color: AppTokens.ts, fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
