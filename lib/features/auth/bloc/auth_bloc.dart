@@ -106,8 +106,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
 
-      // Only admin (lavvaggio owner) can use the mobile app
-      if (user.role == 'super_admin') {
+      // Only owners (lavvaggio operators) can use the mobile app.
+      // Admins (management) use the React web admin.
+      if (user.role == 'admin') {
         await _repository.logout();
         emit(const AuthLoginFailure(
           'Access denied. Please use the web dashboard.',
