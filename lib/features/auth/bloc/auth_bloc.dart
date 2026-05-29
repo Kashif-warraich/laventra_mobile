@@ -22,6 +22,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthSessionExpired>(_onSessionExpired);
     on<AuthBiometricRequested>(_onBiometricRequested);
+    on<AuthUserRefreshed>((event, emit) => emit(AuthAuthenticated(event.user)));
 
     // Auto-logout whenever the API interceptor fires a 401
     _sessionExpiredSub = SessionExpiredNotifier.instance.stream.listen((_) {

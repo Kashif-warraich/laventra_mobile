@@ -7,9 +7,10 @@ class ApiConstants {
   static const String baseUrl = 'https://df97-94-164-223-142.ngrok-free.app/api/v1';
 
   // ── Auth ──
-  static const String login  = '/login';
-  static const String logout = '/logout';
-  static const String signup = '/signup';
+  static const String login          = '/login';
+  static const String logout         = '/logout';
+  static const String signup         = '/signup';
+  static const String changePassword = '/users/change_password';
 
   // ── Resources ──
   static const String users          = '/users';

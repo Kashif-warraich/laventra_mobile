@@ -8,6 +8,7 @@ import '../../features/auth/bloc/auth_bloc.dart';
 import '../../features/auth/bloc/auth_state.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/change_password_screen.dart';
 
 import '../../features/shell/presentation/home_shell.dart';
 
@@ -73,15 +74,27 @@ class AppRouter {
         final loc = state.matchedLocation;
 
         if (loc == '/splash') return null;          // splash decides itself
-        final isAuthed = s is AuthAuthenticated;
-        final atLogin  = loc == '/login';
-        if (!isAuthed && !atLogin) return '/login';
-        if (isAuthed  &&  atLogin) return '/home';
+        final atLogin          = loc == '/login';
+        final atChangePassword = loc == '/change-password';
+
+        if (s is! AuthAuthenticated) {
+          return atLogin ? null : '/login';
+        }
+
+        // Authed users with must_change_password=true are forced onto the
+        // change-password screen until they pick a new password. This
+        // covers both the activation deep-link flow and the rare case
+        // where the flag is set on an already-logged-in account.
+        final mustChange = s.user.mustChangePassword;
+        if (mustChange && !atChangePassword) return '/change-password';
+        if (!mustChange && atChangePassword) return '/home';
+        if (atLogin) return '/home';
         return null;
       },
       routes: [
-        GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-        GoRoute(path: '/login',  builder: (_, __) => const LoginScreen()),
+        GoRoute(path: '/splash',          builder: (_, __) => const SplashScreen()),
+        GoRoute(path: '/login',           builder: (_, __) => const LoginScreen()),
+        GoRoute(path: '/change-password', builder: (_, __) => const ChangePasswordScreen()),
 
         // ── Bottom-nav shell ──────────────────────────────────────────────
         StatefulShellRoute.indexedStack(
