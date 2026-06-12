@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,6 +29,10 @@ import 'features/reports/data/repositories/report_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase first — push_notification_service relies on it being ready
+  // before any FirebaseMessaging call inside auth_repository.login().
+  await Firebase.initializeApp();
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
