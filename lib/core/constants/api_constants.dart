@@ -4,12 +4,13 @@ class ApiConstants {
   // ── Change only this when going to production ──
   // ngrok tunnel for on-device testing against the local Rails server.
   // Swap to the production URL when shipping.
-  static const String baseUrl = 'https://b96c-78-209-31-19.ngrok-free.app/api/v1';
+  static const String baseUrl = 'https://df97-94-164-223-142.ngrok-free.app/api/v1';
 
   // ── Auth ──
-  static const String login  = '/login';
-  static const String logout = '/logout';
-  static const String signup = '/signup';
+  static const String login          = '/login';
+  static const String logout         = '/logout';
+  static const String signup         = '/signup';
+  static const String changePassword = '/users/change_password';
 
   // ── Resources ──
   static const String users          = '/users';

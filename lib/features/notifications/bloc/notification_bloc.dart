@@ -55,13 +55,17 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
   Future<void> _onMarkAllRead(NotificationsMarkAllReadRequested e, Emitter<NotificationState> emit) async {
     final s = state;
+    if (s is! NotificationsLoaded) return;
+
+    // Optimistic update — reflect immediately in the UI before the API call.
+    final updated = s.notifications.map((n) => n.copyWith(read: true, readAt: DateTime.now())).toList();
+    emit(s.copyWith(notifications: updated, unreadCount: 0));
+
     try {
       await _repository.markAllRead();
-      if (s is NotificationsLoaded) {
-        final updated = s.notifications.map((n) => n.copyWith(read: true, readAt: DateTime.now())).toList();
-        emit(s.copyWith(notifications: updated, unreadCount: 0));
-      }
     } on DioException catch (e) {
+      // Revert to original state on failure.
+      emit(s);
       emit(NotificationError(_msg(e, 'Failed to mark all as read')));
     }
   }

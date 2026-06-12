@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_tokens.dart';
 
-/// Bottom-nav host for the 5 main tabs: Home / Events / Lavaggi / Reports /
-/// Profile. Uses go_router's StatefulShellRoute so each tab keeps its own
-/// navigation stack and BLoC state across switches.
+/// Bottom-nav host for the 5 main tabs: Home / Events / Lavaggi / Reports / Profile.
+/// Uses go_router's StatefulShellRoute so each tab keeps its own navigation
+/// stack and BLoC state across switches.
 class HomeShell extends StatelessWidget {
   final StatefulNavigationShell shell;
   const HomeShell({super.key, required this.shell});
@@ -13,7 +13,7 @@ class HomeShell extends StatelessWidget {
     _NavItem(icon: Icons.home_outlined,           selected: Icons.home_rounded,             label: 'Home'),
     _NavItem(icon: Icons.calendar_month_outlined, selected: Icons.calendar_month_rounded,   label: 'Events'),
     _NavItem(icon: Icons.local_car_wash_outlined, selected: Icons.local_car_wash_rounded,   label: 'Lavaggi'),
-    _NavItem(icon: Icons.description_outlined,    selected: Icons.description_rounded,     label: 'Reports'),
+    _NavItem(icon: Icons.bar_chart_outlined,      selected: Icons.bar_chart_rounded,        label: 'Reports'),
     _NavItem(icon: Icons.person_outline_rounded,  selected: Icons.person_rounded,           label: 'Profile'),
   ];
 

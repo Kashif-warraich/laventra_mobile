@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "11532143388",
+    "project_id": "laventra-b80a6",
+    "storage_bucket": "laventra-b80a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:11532143388:android:cc346b71dc2f541b6b48d9",
+        "android_client_info": {
+          "package_name": "com.example.laventra_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnTIg7McK4ZBeLBO3uvF3u_iGbXDo_ttY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

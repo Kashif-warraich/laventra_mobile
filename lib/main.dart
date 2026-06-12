@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/network/api_client.dart';
 import 'core/router/app_router.dart';
+import 'core/services/deep_link_service.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_tokens.dart';
 import 'core/widgets/no_scroll_glow.dart';
@@ -65,6 +67,10 @@ class _LaventraAppState extends State<LaventraApp> {
   late final ReportBloc        _report;
   late final ProfileBloc       _profile;
 
+  // Cached router so DeepLinkService can push routes from outside the widget
+  // tree. Built once when _auth is ready.
+  late final _router = AppRouter.build(_auth);
+
   /// Re-registers the FCM token on every fresh authentication so
   /// notifications keep working after re-installs / token rotations.
   /// Login itself already calls registerToken; this catches the cold-start
@@ -82,11 +88,26 @@ class _LaventraAppState extends State<LaventraApp> {
     _report  = ReportBloc(repository: ReportRepository());
     _profile = ProfileBloc(repository: ProfileRepository());
 
-    _fcmAuthSub = null; // Push notifications disabled
+    // Route incoming laventra:// links (welcome email) into the app — the
+    // service decodes the payload and dispatches an auto-login.
+    DeepLinkService.instance.init(_auth);
+
+    _fcmAuthSub = _auth.stream.listen((state) async {
+      if (state is AuthAuthenticated) {
+        try {
+          await PushNotificationService.instance.initialize();
+          await PushNotificationService.instance.registerToken();
+        } catch (_) {
+          // Non-fatal — backend will work without push, user just won't get
+          // system tray alerts until next launch.
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    DeepLinkService.instance.dispose();
     _fcmAuthSub?.cancel();
     _auth.close();
     _lav.close();
@@ -115,7 +136,7 @@ class _LaventraAppState extends State<LaventraApp> {
         debugShowCheckedModeBanner: false,
         theme:                       AppTheme.theme,
         scrollBehavior:              const NoScrollGlow(),
-        routerConfig:                AppRouter.build(_auth),
+        routerConfig:                _router,
       ),
     );
   }

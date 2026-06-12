@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_alert.dart';
 import '../../../core/widgets/sub_header.dart';
+import '../../../core/services/biometric_service.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../auth/data/models/user_model.dart';
@@ -26,6 +28,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   late final TextEditingController _phone;
   late final TextEditingController _username;
 
+  bool _biometricAvailable = false;
+  bool _biometricEnabled   = false;
+  bool _isFaceId           = false;
+  String _biometricLabel   = 'Biometrics';
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +43,46 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     _email     = TextEditingController(text: u?.email     ?? '');
     _phone     = TextEditingController(text: u?.phoneNumber ?? '');
     _username  = TextEditingController(text: u?.username  ?? '');
+    _loadBiometric();
+  }
+
+  Future<void> _loadBiometric() async {
+    final hw      = await BiometricService.instance.isAvailable();
+    final enabled = await SecureStorage.instance.getBiometricEnabled();
+    final faceId  = await BiometricService.instance.isFaceId();
+    final label   = await BiometricService.instance.biometricLabel();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = hw;
+        _biometricEnabled   = enabled;
+        _isFaceId           = faceId;
+        _biometricLabel     = label;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      final ok = await BiometricService.instance.authenticate(
+        reason: 'Authenticate to enable $_biometricLabel',
+      );
+      if (!ok) {
+        if (mounted) AppAlerts.error(context, 'Authentication failed. $_biometricLabel was not enabled.');
+        return;
+      }
+    }
+
+    await SecureStorage.instance.setBiometricEnabled(value);
+    if (!value) {
+      await SecureStorage.instance.clearBiometricCredentials();
+    }
+    if (mounted) {
+      setState(() => _biometricEnabled = value);
+      AppAlerts.success(
+        context,
+        value ? '$_biometricLabel enabled for sign-in' : '$_biometricLabel disabled',
+      );
+    }
   }
 
   @override
@@ -104,11 +151,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       children: [
                         _Btn(label: 'Change Password',
                           color: AppTokens.blue,
-                          onTap: () => AppAlerts.info(context, 'Password reset email sent')),
-                        const SizedBox(height: 8),
-                        _Btn(label: 'Enable 2FA',
-                          color: AppTokens.teal,
-                          onTap: () => AppAlerts.info(context, '2FA setup not yet implemented')),
+                          onTap: () => context.push('/profile/reset-password')),
+                        const SizedBox(height: 12),
+                        _BiometricToggle(
+                          available: _biometricAvailable,
+                          enabled:   _biometricEnabled,
+                          isFaceId:  _isFaceId,
+                          label:     _biometricLabel,
+                          onChanged: _toggleBiometric,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -139,6 +190,78 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Toggle row for enabling Face ID / Fingerprint, displayed inside the
+/// Security card on the Account Settings screen.
+class _BiometricToggle extends StatelessWidget {
+  final bool   available;
+  final bool   enabled;
+  final bool   isFaceId;
+  final String label;
+  final ValueChanged<bool> onChanged;
+
+  const _BiometricToggle({
+    required this.available,
+    required this.enabled,
+    required this.isFaceId,
+    required this.label,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color:        AppTokens.bgEl.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(AppTokens.rMd),
+        border:       Border.all(color: AppTokens.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color:        AppTokens.teal.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isFaceId ? Icons.face_rounded : Icons.fingerprint_rounded,
+              color: AppTokens.teal, size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enable $label',
+                  style: const TextStyle(color: AppTokens.tp, fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  available
+                      ? (enabled ? 'Enabled' : 'Disabled')
+                      : 'Not available on this device',
+                  style: TextStyle(
+                    color: enabled ? AppTokens.teal : AppTokens.ts,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value:       enabled,
+            onChanged:   available ? onChanged : null,
+            activeColor: AppTokens.teal,
+          ),
+        ],
       ),
     );
   }

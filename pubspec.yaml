@@ -26,6 +26,9 @@ dependencies:
   # Navigation
   go_router: ^14.6.2
 
+  # Deep links (custom scheme + universal/app links)
+  app_links: ^6.3.2
+
   # UI
   google_fonts: ^6.2.1
 
@@ -56,4 +59,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/
 

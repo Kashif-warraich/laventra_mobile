@@ -25,10 +25,14 @@ class AuthRepository {
     final token = data['token'] as String;
     final user  = UserModel.fromJson(data['user']);
 
-    // Persist session and biometric credentials
+    // Persist session. Biometric credentials are only stored once the user
+    // has a "real" password — for first-time activation logins (random
+    // password from the email) we wait until change-password succeeds.
     await _storage.setToken(token);
     await _storage.setUser(user.toJsonString());
-    await _storage.setBiometricCredentials(email, password);
+    if (!user.mustChangePassword) {
+      await _storage.setBiometricCredentials(email, password);
+    }
 
     return user;
   }
@@ -58,5 +62,27 @@ class AuthRepository {
 
   Future<({String email, String password})?> getBiometricCredentials() async {
     return await _storage.getBiometricCredentials();
+  }
+
+  /// Sets a new password for the currently logged-in user. Used by the
+  /// post-activation change-password screen. The server clears
+  /// must_change_password in the response, and we persist both the updated
+  /// user and the new biometric credentials.
+  Future<UserModel> changePassword({
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    final res = await _dio.post(
+      ApiConstants.changePassword,
+      data: {
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      },
+    );
+
+    final user = UserModel.fromJson(res.data['data']);
+    await _storage.setUser(user.toJsonString());
+    await _storage.setBiometricCredentials(user.email, password);
+    return user;
   }
 }
