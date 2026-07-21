@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../constants/api_constants.dart';
 import '../storage/secure_storage.dart';
@@ -43,13 +44,17 @@ class ApiClient {
       ),
     );
 
-    // Pretty logs in debug mode
-    _dio.interceptors.add(
-      PrettyDioLogger(
-        requestHeader: true,
-        requestBody: true,
-        responseBody: true,
-      ),
-    );
+    // Verbose logging ONLY in debug builds. This logger prints the Authorization
+    // bearer token (request headers) and login passwords (request bodies); it must
+    // never run in a release build where device logs can be captured.
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        PrettyDioLogger(
+          requestHeader: true,
+          requestBody: true,
+          responseBody: true,
+        ),
+      );
+    }
   }
 }
